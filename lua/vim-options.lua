@@ -18,3 +18,4 @@ vim.opt.showtabline = 2
 vim.opt.sessionoptions:remove("curdir")
 vim.opt.sessionoptions:remove("sesdir")
 vim.o.equalalways = false
+--vim.opt.signcolumn = "auto:2"

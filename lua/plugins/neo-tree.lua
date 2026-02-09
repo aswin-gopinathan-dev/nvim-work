@@ -10,40 +10,57 @@ return {
         require('neo-tree').setup({
             sources = {
                 'filesystem',
+				"git_status",
+				"buffers",
             },
 			
 			open_on_setup = false,
 			open_on_setup_file = false,
+			enable_git_status = true,
+			enable_diagnostics = true,
            
             default_component_configs = {
                 git_status = {
                     symbols = {
                         -- Change type
-                        added = "A",     -- or "✚"
-                        modified = "M",  -- or ""
-                        deleted = "D",   -- this can only be used in the git_status source
-                        renamed = "R",   -- this can only be used in the git_status source
-                        -- Status type
-                        untracked = "U", --"",
-                        ignored = "I",
-                        unstaged = "US",
-                        staged = "S",
-                        conflict = "C",
+                        added     = "✚",
+						modified  = "",
+						deleted   = "✖",
+						renamed   = "󰁕",
+						untracked = "",
+						ignored   = "",
+						unstaged  = "󰄱",
+						staged    = "",
+						conflict  = "",
                     },
                 },
             },
+			renderers = {
+				file = {
+				  { "git_status" },
+				  { "indent" },
+				  { "icon" },
+				  { "name", use_git_status_colors = true },
+				},
+				directory = {
+				  { "indent" },
+				  { "icon" },
+				  { "name", use_git_status_colors = true },
+				  { "git_status" },
+				},
+			},
             filesystem = {
                 header = {
                     -- Set this to true to display only the project name
                     show_root_name = true,
                 },
-                filtered_items = {
+                --[[filtered_items = {
                     visible = false,
                     hide_dotfiles = false,
                     hide_gitignored = false,
                     hide_by_name = {
                         ".DS_Store",
-                        ".git",
+                        --".git",
                         ".gitignore",
                         "README.md",
                         "build",
@@ -51,8 +68,7 @@ return {
                     },
                     show_hidden_count = false,
                     never_show = {},
-                },
-
+                },--]]
             },
             window = {
 				position = "left",

@@ -27,19 +27,31 @@ vim.opt.termguicolors = true
 require("vim-options")
 require("lazy").setup("plugins")
 require("vim-keymaps-general")
---require("vim-keymaps-build")
 require("vim-keymaps-debug")
+require("which-key-entries")
 
-if vim.g.neovide then
-  vim.o.guifont = "JetBrainsMono Nerd Font:h9"
-  vim.g.neovide_cursor_animation_length = 0
-  vim.g.neovide_cursor_trail_size = 0
-  vim.g.neovide_cursor_vfx_mode = ""
-  vim.g.neovide_scroll_animation_length = 0
-end
 
 vim.opt.clipboard = "unnamedplus"
 
 vim.env.RIPGREP_CONFIG_PATH = nil
 vim.env.RG_DEFAULT_COMMAND = nil
-vim.opt.shadafile = vim.fn.stdpath("data") .. "/shada/main.shada"
+
+local shada_dir = vim.fn.stdpath("data") .. "\\shada"
+local shada_file = shada_dir .. "\\main.shada"
+
+if vim.fn.isdirectory(shada_dir) == 1 then
+    vim.fn.system('cmd /c del /q "' .. shada_dir .. '\\*.tmp.*"')
+end
+
+vim.opt.shada = "!,'100,<50,s10,h"
+vim.opt.shadafile = shada_file
+
+vim.opt.guicursor =
+  "n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50," ..
+  "a:blinkwait700-blinkoff400-blinkon250"
+
+vim.filetype.add({
+  extension = {
+    ino = 'cpp',
+  },
+})
