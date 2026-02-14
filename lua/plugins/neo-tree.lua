@@ -1,6 +1,7 @@
 return {
     "nvim-neo-tree/neo-tree.nvim",
     branch = "v3.x",
+	cmd = "Neotree",
     dependencies = {
         "nvim-lua/plenary.nvim",
         "nvim-tree/nvim-web-devicons",
@@ -54,7 +55,7 @@ return {
                     -- Set this to true to display only the project name
                     show_root_name = true,
                 },
-                --[[filtered_items = {
+                filtered_items = {
                     visible = false,
                     hide_dotfiles = false,
                     hide_gitignored = false,
@@ -68,7 +69,7 @@ return {
                     },
                     show_hidden_count = false,
                     never_show = {},
-                },--]]
+                },
             },
             window = {
 				position = "left",

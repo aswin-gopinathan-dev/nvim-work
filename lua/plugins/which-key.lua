@@ -37,6 +37,17 @@ return {
 		filetypes = {},
 		buftypes = {},
 	  },
+	  win = {
+		border = "rounded",
+		padding = { 1, 2 },
+		title = true,
+		title_pos = "center",
+
+		width = {
+		  min = 40,
+		  max = math.huge,
+		},
+	  },
 	  
 	  
 	  triggers = {},

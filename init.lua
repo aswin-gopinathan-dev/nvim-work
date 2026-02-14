@@ -55,3 +55,11 @@ vim.filetype.add({
     ino = 'cpp',
   },
 })
+
+_G.MyConfig = {
+    case_sensitive = false,
+    match_whole_word = false,
+	skip_folders = { ".git",  "build",  "env",  "venv", "logs",  "sagacity_env", 
+					 "site-packages",  "__pycache__",  "ffmpeg",  "extern",  "pybind11" },
+	file_extensions = {},
+}

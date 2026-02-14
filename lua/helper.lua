@@ -2,6 +2,127 @@ local M = {}
 
 -- =====================================================================
 
+
+function M.manage_search_settings()
+  local pickers = require("telescope.pickers")
+  local finders = require("telescope.finders")
+  local conf    = require("telescope.config").values
+  local actions = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+
+  -- 1. Helper to generate the list items dynamically
+  local function get_settings_list()
+    local results = {
+      { type = "flag", name = "Match Case", value = _G.MyConfig.case_sensitive },
+      { type = "flag", name = "Whole Word", value = _G.MyConfig.match_whole_word },
+    }
+    for _, f in ipairs(_G.MyConfig.skip_folders or {}) do
+      table.insert(results, { type = "folder", name = f })
+    end
+    for _, e in ipairs(_G.MyConfig.file_extensions or {}) do
+      table.insert(results, { type = "extension", name = e })
+    end
+    return results
+  end
+
+  -- 2. Helper to refresh the window
+  local function refresh(prompt_bufnr)
+    local picker = action_state.get_current_picker(prompt_bufnr)
+    picker:refresh(finders.new_table({
+      results = get_settings_list(),
+      entry_maker = function(entry)
+        local display = string.format("[%s] %s", entry.type:sub(1,1):upper(), entry.name)
+        if entry.type == "flag" then
+          display = display .. ": " .. (entry.value and "ON" or "OFF")
+        end
+        return { value = entry, display = display, ordinal = entry.name }
+      end
+    }), { reset_prompt = true })
+  end
+
+  pickers.new({}, {
+    prompt_title = "Search Manager (t: Toggle, f: +Folder, e: +Ext, d: Delete)",
+    initial_mode = "normal",
+    finder = finders.new_table({
+      results = get_settings_list(),
+      entry_maker = function(entry)
+        local display = string.format("[%s] %s", entry.type:sub(1,1):upper(), entry.name)
+        if entry.type == "flag" then
+          display = display .. ": " .. (entry.value and "ON" or "OFF")
+        end
+        return { value = entry, display = display, ordinal = entry.name }
+      end
+    }),
+    sorter = conf.generic_sorter({}),
+    layout_config = { width = 0.5, height = 0.5 },
+    attach_mappings = function(prompt_bufnr, map)
+      local win = vim.api.nvim_get_current_win()
+
+      -- TOGGLE FLAG (t)
+      map("n", "t", function()
+        local selection = action_state.get_selected_entry()
+        if selection and selection.value.type == "flag" then
+          if selection.value.name == "Match Case" then
+            _G.MyConfig.case_sensitive = not _G.MyConfig.case_sensitive
+          else
+            _G.MyConfig.match_whole_word = not _G.MyConfig.match_whole_word
+          end
+          refresh(prompt_bufnr)
+        end
+      end)
+
+      -- ADD FOLDER (f)
+      map("n", "f", function()
+        vim.ui.input({ prompt = "Exclude Folder: " }, function(input)
+          if input and input ~= "" then
+            table.insert(_G.MyConfig.skip_folders, input)
+            vim.defer_fn(function() 
+              if vim.api.nvim_win_is_valid(win) then 
+                vim.api.nvim_set_current_win(win)
+                refresh(prompt_bufnr) 
+              end 
+            end, 10)
+          end
+        end)
+      end)
+
+      -- ADD EXTENSION (e)
+      map("n", "e", function()
+        vim.ui.input({ prompt = "Include Extension: " }, function(input)
+          if input and input ~= "" then
+            table.insert(_G.MyConfig.file_extensions, input)
+            vim.defer_fn(function() 
+              if vim.api.nvim_win_is_valid(win) then 
+                vim.api.nvim_set_current_win(win)
+                refresh(prompt_bufnr) 
+              end 
+            end, 10)
+          end
+        end)
+      end)
+
+      -- DELETE (d)
+      map("n", "d", function()
+        local selection = action_state.get_selected_entry()
+        if not selection or selection.value.type == "flag" then return end
+        
+        local target = (selection.value.type == "folder") and _G.MyConfig.skip_folders or _G.MyConfig.file_extensions
+        for i, v in ipairs(target) do
+          if v == selection.value.name then
+            table.remove(target, i)
+            break
+          end
+        end
+        refresh(prompt_bufnr)
+      end)
+
+      map("n", "<Esc>", actions.close)
+      return true
+    end,
+  }):find()
+end
+
+
 function M.format_file()
   local ft = vim.bo.filetype
 
@@ -21,15 +142,11 @@ function M.find_word_under_cursor()
     tb.grep_string({
       search = word,
       use_regex = false, -- important
-      additional_args = function()
-        return { "--fixed-strings" } -- literal substring match
-      end,
+      additional_args = M.text_filter()
     })
   else
     tb.live_grep({
-      additional_args = function()
-        return { "--fixed-strings" }
-      end,
+      additional_args = M.text_filter()
     })
   end
 end
@@ -44,8 +161,9 @@ function M.find_selected_word()  -- Search selected text --> Press viw in normal
   lines[1] = string.sub(lines[1], cs)
   local text = table.concat(lines, "\n")
 
-  require("telescope.builtin").grep_string({
+  require("telescope.builtin").live_grep({
     default_text = text,
+	additional_args = M.text_filter()
   })
 end
 
@@ -268,11 +386,119 @@ function M.find_word()
     if input == nil or input == "" then
       return
     end
-    -- set the search register and jump to first match
+	
     vim.fn.setreg("/", input)
-    vim.cmd("normal! n")
+	local found = vim.fn.search(input, "nw")
+    if found == 0 then
+      vim.notify("Text not found: " .. input, vim.log.levels.INFO)
+      return
+    end
+	
+    vim.cmd("silent! normal! n")
   end)
 end
+
+function M.text_filter()
+  local args = { "--fixed-strings" }   -- remove if you want fuzzy matching
+  
+-- Check the global flag for whole word matching
+  if _G.MyConfig.match_whole_word then
+      table.insert(args, "--word-regexp")
+  end
+  
+  -- Check the global flag for Match case
+  if _G.MyConfig.case_sensitive then
+      table.insert(args, "--case-sensitive")
+  else
+      -- Optional: explicitly add ignore-case if the global is false
+      table.insert(args, "--ignore-case")
+  end
+
+  -- Folders to exclude
+  for _, name in ipairs(_G.MyConfig.skip_folders or {}) do
+    -- turns "env" into "!**/env/**"
+    table.insert(args, "--glob")
+    table.insert(args, "!**/" .. name .. "/**")
+  end
+
+  -- File types to include (optional; empty = no type filter)
+  for _, ext in ipairs(_G.MyConfig.file_extensions or {}) do
+    -- turns "py" into "**/*.py"
+    table.insert(args, "--glob")
+    table.insert(args, "**/*." .. ext)
+  end
+
+  return args
+end
+
+
+local function lua_pat_escape(s)
+  -- Escape Lua pattern magic characters
+  return (s:gsub("([%%%^%$%(%)%.%[%]%*%+%-%?])", "%%%1"))
+end
+
+function M.folder_filter()
+ 
+  local patterns = {}
+  for _, name in ipairs(_G.MyConfig.skip_folders or {}) do
+    local escaped = lua_pat_escape(name)
+    table.insert(patterns, escaped .. "[\\/]")
+  end
+  
+  return patterns
+end
+
+
+
+local filter_win = nil
+local filter_buf = nil
+
+function M.show_find_filters()
+  local path = vim.fn.stdpath("config") .. "/lua/config/search_filters.lua"
+
+  -- If popup window is already open, just focus it
+  if filter_win and vim.api.nvim_win_is_valid(filter_win) then
+    vim.api.nvim_set_current_win(filter_win)
+    return
+  end
+
+  -- Reuse existing buffer if it exists, otherwise create one
+  filter_buf = vim.fn.bufadd(path)
+  vim.fn.bufload(filter_buf)  -- load file into buffer
+  vim.bo[filter_buf].buflisted = false
+
+  -- Popup size
+  local width  = math.floor(vim.o.columns * 0.45)
+  local height = math.floor(vim.o.lines * 0.65)
+
+  -- Open floating window with that buffer
+  filter_win = vim.api.nvim_open_win(filter_buf, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = math.floor((vim.o.lines - height) / 2),
+    col = math.floor((vim.o.columns - width) / 2),
+    style = "minimal",
+    border = "rounded",
+	title = " Search Filters ",
+	title_pos = "center",
+  })
+
+  -- Close helper
+  local function close()
+    if filter_win and vim.api.nvim_win_is_valid(filter_win) then
+      vim.api.nvim_win_close(filter_win, true)
+    end
+    filter_win = nil
+    -- we intentionally do NOT delete the buffer; it stays in the buffer list
+    -- so next time we can reuse it via bufadd(path)
+  end
+
+  -- q / <Esc> to close (buffer-local)
+  vim.keymap.set("n", "q", close, { buffer = filter_buf, nowait = true })
+  vim.keymap.set("n", "<Esc>", close, { buffer = filter_buf, nowait = true })
+end
+
 
 
 -- 🔹 Colorscheme switcher
@@ -497,6 +723,7 @@ function M.get_files_list()
 
   pickers.new({}, {
     prompt_title = "Buffers",
+	initial_mode = "normal",
     finder = finders.new_table({
       results = bufs,
       entry_maker = function(buf)
@@ -524,6 +751,43 @@ function M.get_files_list()
           vim.api.nvim_set_current_buf(entry.bufnr)
         end
       end)
+	  map("n", "x", function()
+		  local picker = action_state.get_current_picker(prompt_bufnr)
+		  local entry = action_state.get_selected_entry()
+		  if not entry or not entry.bufnr then return end
+
+		  local row = picker:get_selection_row()
+
+		  -- delete buffer
+		  vim.api.nvim_buf_delete(entry.bufnr, { force = false })
+
+		  -- refresh results
+		  picker:refresh(
+			finders.new_table({
+			  results = vim.fn.getbufinfo({ buflisted = 1 }),
+			  entry_maker = function(buf)
+				local name = buf.name ~= "" and buf.name or "[No Name]"
+				return {
+				  value   = buf,
+				  ordinal = name,
+				  display = vim.fn.fnamemodify(name, ":t"),
+				  bufnr   = buf.bufnr,
+				}
+			  end,
+			}),
+			{ reset_prompt = false }
+		  )
+
+		  -- move cursor to same row (or next if last)
+		  local new_count = #vim.fn.getbufinfo({ buflisted = 1 })
+		  if row >= new_count then
+			row = new_count - 1
+		  end
+		  if row >= 0 then
+			picker:set_selection(row)
+		  end
+		end)
+
       return true
     end,
   }):find()
