@@ -1,11 +1,10 @@
-
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then   -- if lazy.nvim doesnt exit in nvim-data folder, clone it from github
+if not vim.loop.fs_stat(lazypath) then -- if lazy.nvim doesnt exit in nvim-data folder, clone it from github
   vim.fn.system({
-    "git", 
+    "git",
     "clone",
     "--filter=blob:none",
-    "https://github.com/folke/lazy.nvim.git", 
+    "https://github.com/folke/lazy.nvim.git",
     "--branch=stable",
     lazypath,
   })
@@ -23,6 +22,7 @@ vim.opt.errorformat:prepend({
 vim.opt.fillchars:append({ eob = " " })
 
 vim.opt.termguicolors = true
+vim.g.restoring_session = false
 
 require("vim-options")
 require("lazy").setup("plugins")
@@ -40,26 +40,34 @@ local shada_dir = vim.fn.stdpath("data") .. "\\shada"
 local shada_file = shada_dir .. "\\main.shada"
 
 if vim.fn.isdirectory(shada_dir) == 1 then
-    vim.fn.system('cmd /c del /q "' .. shada_dir .. '\\*.tmp.*"')
+  vim.fn.system('cmd /c del /q "' .. shada_dir .. '\\*.tmp.*"')
 end
 
 vim.opt.shada = "!,'100,<50,s10,h"
 vim.opt.shadafile = shada_file
 
 vim.opt.guicursor =
-  "n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50," ..
-  "a:blinkwait700-blinkoff400-blinkon250"
+    "n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50," ..
+    "a:blinkwait700-blinkoff400-blinkon250"
 
-vim.filetype.add({
-  extension = {
-    ino = 'cpp',
-  },
+vim.opt.sessionoptions:remove("terminal")
+
+vim.api.nvim_create_autocmd("VimLeavePre", {
+  callback = function()
+    -- Reset terminal attributes
+    io.write("\27[0m")     -- reset colors
+    io.write("\27[?25h")   -- ensure cursor visible
+    io.write("\27[?1049l") -- ensure alt screen disabled
+    io.flush()
+  end,
 })
 
+
+
 _G.MyConfig = {
-    case_sensitive = false,
-    match_whole_word = false,
-	skip_folders = { ".git",  "build",  "env",  "venv", "logs",  "sagacity_env", 
-					 "site-packages",  "__pycache__",  "ffmpeg",  "extern",  "pybind11" },
-	file_extensions = {},
+  case_sensitive = false,
+  match_whole_word = false,
+  skip_folders = { ".git", "build", "env", "venv", "logs", "sagacity_env",
+    "site-packages", "__pycache__", "ffmpeg", "extern", "pybind11" },
+  file_extensions = {},
 }

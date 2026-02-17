@@ -3,8 +3,15 @@ return {
   event = { "BufReadPre", "BufNewFile" },
   config = function()
     require("gitsigns").setup({
+	  on_attach = function(bufnr)
+		local is_restoring = vim.g.restoring_session or false
+        if is_restoring or vim.api.nvim_get_current_buf() ~= bufnr then
+          return false -- Skip attaching to this buffer right now
+        end
+      end,
+	  
       -- ── SIGNS ───────────────────────────────────────────────
-      signs = {
+      signs                        = {
         add          = { text = "▎" },
         change       = { text = "▎" },
         delete       = { text = "▔" },
@@ -13,30 +20,30 @@ return {
         untracked    = { text = "┆" },
       },
 
-      signcolumn = true,      -- show signs in sign column
-      numhl      = false,     -- line number highlight
-      linehl     = false,     -- whole line highlight
-      word_diff  = false,     -- inline diff (can be noisy)
+      signcolumn                   = true, -- show signs in sign column
+      numhl                        = false, -- line number highlight
+      linehl                       = false, -- whole line highlight
+      word_diff                    = false, -- inline diff (can be noisy)
 
-      watch_gitdir = {
+      watch_gitdir                 = {
         follow_files = true,
       },
 
-      auto_attach = true,
+      auto_attach                  = true,
 
       -- ── BLAME ───────────────────────────────────────────────
-      current_line_blame = false,  -- toggle via keymap
-      current_line_blame_opts = {
+      current_line_blame           = false, -- toggle via keymap
+      current_line_blame_opts      = {
         virt_text = true,
         virt_text_pos = "eol",
         delay = 300,
         ignore_whitespace = false,
       },
       current_line_blame_formatter =
-        "<author>, <author_time:%Y-%m-%d> • <summary>",
+      "<author>, <author_time:%Y-%m-%d> • <summary>",
 
       -- ── PREVIEW ─────────────────────────────────────────────
-      preview_config = {
+      preview_config               = {
         border = "rounded",
         style = "minimal",
         relative = "cursor",
@@ -45,8 +52,8 @@ return {
       },
 
       -- ── PERFORMANCE ─────────────────────────────────────────
-      update_debounce = 100,
-      max_file_length = 40000,
+      update_debounce              = 100,
+      max_file_length              = 40000,
     })
   end,
 }

@@ -6,12 +6,12 @@ return {
       highlight = false,
       separator = " 󰛂 ",
       depth_limit = 5,
-	  lsp = {
-		-- Set to true to auto-attach to all servers (with symbolProvider)
-		auto_attach = true,
-		-- Priority list for multiple servers
-		preference = { "pyright", "clangd" },
-	  },
+      lsp = {
+        -- Set to true to auto-attach to all servers (with symbolProvider)
+        auto_attach = true,
+        -- Priority list for multiple servers
+        preference = { "pyright", "clangd" },
+      },
     }
   end,
 }

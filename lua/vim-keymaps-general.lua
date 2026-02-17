@@ -133,7 +133,8 @@ keymap.set("n", "<leader>mc", function() require("helper").select_colorscheme() 
 keymap.set("n", "<leader>mb", "<Plug>(Marks-toggle-bookmark0)", {silent = true})
 keymap.set("n", "<leader>m]", "<Plug>(Marks-next-bookmark0)", {silent = true})
 keymap.set("n", "<leader>m[", "<Plug>(Marks-prev-bookmark0)", {silent = true})
-keymap.set("n", "<leader>ml", "<cmd>BookmarksListAll<CR>")
+--keymap.set("n", "<leader>ml", "<cmd>BookmarksListAll<CR>")
+keymap.set("n", "<leader>ml", "<cmd>Telescope marks<CR>", { desc = "Telescope Marks" })
 
 
 -- Word/Line selection keymaps in insert mode

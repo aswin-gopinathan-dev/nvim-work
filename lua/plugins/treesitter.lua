@@ -8,7 +8,7 @@ return {
     config = function()
         -- import nvim-treesitter plugin
         local treesitter = require("nvim-treesitter.configs")
-require 'nvim-treesitter.install'.compilers = { "zig" }
+        require 'nvim-treesitter.install'.compilers = { "zig" }
 
         -- configure treesitter
         treesitter.setup({ -- enable syntax highlighting
@@ -25,7 +25,7 @@ require 'nvim-treesitter.install'.compilers = { "zig" }
             ensure_installed = {
                 "cpp",
                 "lua",
-				"qmljs",
+                "qmljs",
             },
             incremental_selection = {
                 enable = true,

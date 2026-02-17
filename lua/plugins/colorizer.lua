@@ -1,4 +1,4 @@
-return{
+return {
   "norcalli/nvim-colorizer.lua",
   event = "BufReadPre",
   config = function()

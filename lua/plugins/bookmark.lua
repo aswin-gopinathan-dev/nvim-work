@@ -3,7 +3,7 @@ return {
   event = "VeryLazy",
   config = function()
     require("marks").setup({
-      default_mappings = false,  -- we’ll define our own keys
+      default_mappings = false, -- we’ll define our own keys
       bookmark_0 = {
         sign = "",
         virt_text = "",

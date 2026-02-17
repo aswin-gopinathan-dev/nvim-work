@@ -1,11 +1,11 @@
 return {
   {
     "hrsh7th/cmp-nvim-lsp",
-	event = "InsertEnter",
+    event = "InsertEnter",
   },
   {
     "L3MON4D3/LuaSnip",
-	event = "InsertEnter",
+    event = "InsertEnter",
     dependencies = {
       "saadparwaiz1/cmp_luasnip",
       "rafamadriz/friendly-snippets",
@@ -13,7 +13,7 @@ return {
   },
   {
     "hrsh7th/nvim-cmp",
-	event = "InsertEnter",
+    event = "InsertEnter",
     config = function()
       local cmp = require("cmp")
       require("luasnip.loaders.from_vscode").lazy_load()
@@ -34,13 +34,13 @@ return {
           ["<C-Space>"] = cmp.mapping.complete(),
           ["<C-e>"] = cmp.mapping.abort(),
           ["<CR>"] = cmp.mapping.confirm({ select = true }),
-		  ["<Esc>"] = cmp.mapping(function(fallback)
-			  if cmp.visible() then
-				cmp.abort()
-			  else
-				fallback()
-			  end
-			end, { "i", "s" }),
+          ["<Esc>"] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.abort()
+            else
+              fallback()
+            end
+          end, { "i", "s" }),
         }),
         sources = cmp.config.sources({
           { name = "nvim_lsp" },
