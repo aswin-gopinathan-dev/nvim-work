@@ -19,3 +19,9 @@ vim.opt.sessionoptions:remove("curdir")
 vim.opt.sessionoptions:remove("sesdir")
 vim.o.equalalways = false
 --vim.opt.signcolumn = "auto:2"
+
+if vim.fn.has("unnamedplus") == 1 then
+  vim.opt.clipboard = "unnamedplus"
+else
+  vim.opt.clipboard = ""
+end

@@ -1,0 +1,24 @@
+active_target = "bias_tests"
+
+python = "sagacity/Scripts/python"
+codelldb = "packages/codelldb/extension/adapter/codelldb"
+
+[bias_tests]
+type = "cpp"
+name = "Bias USB Driver Tests"
+build_dir = "./build"
+program = "bias-usb-driver-tests"
+cwd = "."
+args = []
+stopOnEntry = false
+runInTerminal = false
+
+[sagacity_desktop]
+type = "python"
+name = "Sagacity Desktop"
+build_dir = "./"
+program = "entrypoint.py"
+cwd = "."
+args = []
+justMyCode = false
+subProcess = true

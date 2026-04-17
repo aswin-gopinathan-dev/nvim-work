@@ -71,3 +71,6 @@ _G.MyConfig = {
     "site-packages", "__pycache__", "ffmpeg", "extern", "pybind11" },
   file_extensions = {},
 }
+
+vim.opt.conceallevel = 2
+vim.opt.concealcursor = "nc"

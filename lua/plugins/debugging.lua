@@ -122,10 +122,18 @@ return {
 
 			return exes[1]
 		end
+		
+		
+		local platform = require("platform")
+		local cfg, target = platform.get_active_target()
+		if not cfg then
+			return
+		end
 
+		target = cfg[target]
 
-		local mason_path = vim.fn.stdpath("data") .. "\\mason\\"
-		local codelldb_path = mason_path .. "packages\\codelldb\\extension\\adapter\\codelldb.exe"
+		local mason_path = vim.fn.stdpath("data")
+		local codelldb_path = platform.join(mason_path, "mason", cfg.codelldb)
 
 		dap.adapters.codelldb = {
 			type = "server",
@@ -140,43 +148,63 @@ return {
 				on_config(config)
 			end,
 		}
+		
+		dap.listeners.after.event_initialized["dap_exception_breakpoints"] = function()
+			dap.set_exception_breakpoints({})
+		end
+		
+		local cpp_program = platform.join(
+			platform.resolve(target.build_dir or "."),
+			target.program
+		)
 
+		local lib_dir = platform.resolve(target.build_dir or ".")
+		
 		dap.configurations.cpp = {
 			{
-				name = "Launch",
+				name = target.name or "Launch",
 				type = "codelldb",
 				request = "launch",
-				program = pick_exe,
-				cwd = "${workspaceFolder}",
+				program = cpp_program,
+				cwd = platform.resolve(target.cwd or "."),
 
-				stopOnEntry = false,
-				args = {},
+				stopOnEntry = target.stopOnEntry == nil and false or target.stopOnEntry,
+				args = target.args or {},
+				runInTerminal = target.runInTerminal == nil and false or target.runInTerminal,
 
-				runInTerminal = false, -- launch in a real terminal
-				console = "internalConsole", -- send output to terminal, not just internal pipe
+				env = {
+					LD_LIBRARY_PATH = lib_dir,
+				},
+	
+				preRunCommands = {
+					"breakpoint name configure --disable cpp_exception",
+				},
 			},
 		}
 
+
+		local python_path = platform.resolve(cfg.python)
+
 		dap.adapters.python = {
 			type = "executable",
-			command = vim.fn.getcwd() .. "\\.venv\\Scripts\\python.exe",
+			command = python_path,
 			args = { "-m", "debugpy.adapter" },
 		}
 
 
-		local python_path = vim.fn.getcwd() .. "\\.venv\\Scripts\\python.exe"
 		require("dap-python").setup(python_path)
 
 		dap.configurations.python = {
 			{
 				type = "python",
 				request = "launch",
-				name = "Sagacity Desktop",
-				program = "${workspaceFolder}\\entrypoint.py",
-				cwd = "${workspaceFolder}",
-				console = "integratedTerminal",
-				justMyCode = false,
-				subProcess = true,
+				name = target.name or "Python",
+				program = platform.resolve(target.program),
+				cwd = platform.resolve(target.cwd or "."),
+				console = target.console or "integratedTerminal",
+				justMyCode = target.justMyCode == nil and false or target.justMyCode,
+				subProcess = target.subProcess == nil and true or target.subProcess,
+				args = target.args or {},
 			},
 		}
 
@@ -197,10 +225,10 @@ return {
 					[vim.diagnostic.severity.HINT] = "󰠠 ",
 				},
 				linehl = {
-					[vim.diagnostic.severity.ERROR] = "Error",
-					[vim.diagnostic.severity.WARN] = "Warn",
-					[vim.diagnostic.severity.INFO] = "Info",
-					[vim.diagnostic.severity.HINT] = "Hint",
+					[vim.diagnostic.severity.ERROR] = nil, -- "Error",
+					[vim.diagnostic.severity.WARN] = nil, -- "Warn",
+					[vim.diagnostic.severity.INFO] = nil, -- "Info",
+					[vim.diagnostic.severity.HINT] = nil, -- "Hint",
 				},
 			},
 		})

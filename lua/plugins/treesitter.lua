@@ -7,8 +7,19 @@ return {
     },
     config = function()
         -- import nvim-treesitter plugin
-        local treesitter = require("nvim-treesitter.configs")
-        require 'nvim-treesitter.install'.compilers = { "zig" }
+        local ok, treesitter = pcall(require, "nvim-treesitter.configs")
+        if not ok then
+            treesitter = require("nvim-treesitter.config")
+        end
+        
+        local install = require("nvim-treesitter.install")
+        if vim.fn.executable("zig") == 1 then
+          install.compilers = { "zig" }
+        elseif vim.fn.executable("clang") == 1 then
+          install.compilers = { "clang" }
+        elseif vim.fn.executable("gcc") == 1 then
+          install.compilers = { "gcc" }
+        end
 
         -- configure treesitter
         treesitter.setup({ -- enable syntax highlighting

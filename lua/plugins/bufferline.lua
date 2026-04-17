@@ -24,6 +24,18 @@ return {
 				separator_style = "thick",
 				left_separator = ' | ',
 				right_separator = ' | ',
+				
+				close_command = function(bufnr)
+				  require("helper").smart_close_buffer(bufnr)
+				end,
+
+				right_mouse_command = function(bufnr)
+				  require("helper").smart_close_buffer(bufnr)
+				end,
+				
+				name_formatter = function(buf)
+					return vim.fn.fnamemodify(buf.name, ":t")  -- filename only
+				end,
 			},
 
 		})

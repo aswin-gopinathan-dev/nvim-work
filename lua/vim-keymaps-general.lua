@@ -53,7 +53,9 @@ keymap.set("n", "<leader>wh", "<C-w>v")
 keymap.set("n", "<leader>wv", "<C-w>s")
 keymap.set("n", "<leader>we", "<C-w>=")
 keymap.set("n", "<leader>w", function() require("helper").resize_window() end)
-keymap.set('n', '<leader>w]', function() require("helper").activate_next_window() end)
+keymap.set({"n", "t"}, '<leader>w]', function() require("helper").activate_next_window() end)
+keymap.set("n", "<leader>wr", function() require("helper").reset_buffers_to_default_size() end)
+keymap.set({"n", "t"}, "<leader>ww", function() require("helper").activate_code_buffer() end)
 -- ===========================================
 -- <leader>w	--> End Window Functionalities
 
@@ -76,9 +78,22 @@ keymap.set("n", "<leader>gE", "G$")    -- go to end of current line
 
 -- <leader>t	--> Begin Terminal Functionalities
 -- ===============================================
-vim.keymap.set("n", "<leader>tf", function() require("helper").open_terminal_floating() end, { desc = "Open Floating Terminal" })
-vim.keymap.set("n", "<leader>tt", function() require("helper").open_terminal_horizontal() end, { desc = "Open Horizontal Terminal" })
-keymap.set("t", "<leader>tt", "<Cmd>ToggleTerm<CR>")
+keymap.set("n", "<leader>tf", function() require("helper").open_terminal_floating() end, { desc = "Open Floating Terminal" })
+keymap.set("n", "<leader>tt", function() require("helper").open_terminal_horizontal() end, { desc = "Open Horizontal Terminal" })
+--keymap.set("t", "<leader>tt", "<Cmd>ToggleTerm<CR>")
+
+keymap.set({ "n", "t" }, "<leader>tt", function()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "toggleterm" then
+      vim.api.nvim_set_current_win(win)
+      return
+    end
+  end
+
+  vim.cmd("ToggleTerm")
+end, { desc = "Open or focus terminal" })
+
 keymap.set("n", "<leader>ts", function() require("helper").preview_svg() end, { desc = 'Preview SVG' })
 keymap.set("n", "<F8>", function() require("helper").preview_svg() end, { desc = 'Preview SVG' })
 keymap.set("n", "<leader>tr", function() require("helper").run_app() end, { desc = "Run Application" })
@@ -92,8 +107,26 @@ keymap.set({ "t" }, "<Esc><Esc>", function() require("helper").close_terminal() 
 
 -- <leader>e	--> Begin Explorer Functionalities
 -- ===============================================
-keymap.set("n", "<leader>ee", ":Neotree toggle<CR>")
-keymap.set("n", "<leader>ef", ":Neotree focus<CR>")
+--keymap.set("n", "<leader>ee", ":Neotree toggle<CR>")
+--keymap.set("n", "<leader>ef", ":Neotree focus<CR>")
+keymap.set("n", "<leader>ee", function()
+  local neotree_win = nil
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "neo-tree" then
+      neotree_win = win
+      break
+    end
+  end
+
+  if neotree_win then
+    vim.api.nvim_set_current_win(neotree_win)
+  else
+    vim.cmd("Neotree show")
+  end
+end, { desc = "Open/focus Neo-tree" })
+
 keymap.set("n", "<leader>ev", function() require("helper").preview_file() end, { desc = "File Preview" })
 -- =============================================
 -- <leader>e	--> End Explorer Functionalities
@@ -112,14 +145,36 @@ keymap.set("n", "<leader>sf", "<cmd>AutoSession search<CR>")
 
 -- <leader>c	--> Begin CMake Functionalities
 -- ==============================================
+--[[
 local opts = { noremap = true, silent = true }
 keymap.set("n", "<leader>cg", "<cmd>CMakeGenerate<CR>", vim.tbl_extend("force", opts, { desc = "CMake Generate" }))
 keymap.set("n", "<leader>cb", "<cmd>CMakeBuild<CR>",    vim.tbl_extend("force", opts, { desc = "CMake Build" }))
 keymap.set("n", "<leader>cr", "<cmd>CMakeRun<CR>",      vim.tbl_extend("force", opts, { desc = "CMake Run" }))
 keymap.set("n", "<leader>c]", "<cmd>cnext<cr>", { desc = "Next error" })
 keymap.set("n", "<leader>c[", "<cmd>cprev<cr>", { desc = "Prev error" })
+]]
 -- ============================================
 -- <leader>c	--> End CMake Functionalities
+
+
+
+-- <leader>c	--> Begin ChatGPT Functionalities
+-- ==============================================
+keymap.set("n", "<leader>cp", function() require("CopilotChat").toggle() end, { desc = "Toggle Copilot Chat" })
+keymap.set("v", "<leader>ce", "<cmd>CopilotChatExplain<CR>", { desc = "Explain selection" })
+keymap.set("v", "<leader>cf", "<cmd>CopilotChatFix<CR>", { desc = "Fix selection" })
+keymap.set("v", "<leader>co", "<cmd>CopilotChatOptimize<CR>", { desc = "Optimize selection" })
+keymap.set("v", "<leader>ct", "<cmd>CopilotChatTests<CR>", { desc = "Generate tests" })
+
+
+--vim.keymap.set({ "n", "v" }, "<leader>ha", "<cmd>CodeCompanionActions<cr>", { desc = "AI Actions" })
+--vim.keymap.set({ "n", "v" }, "<leader>hc", "<cmd>CodeCompanionChat Toggle<cr>", { desc = "Toggle AI Chat" })
+--vim.keymap.set("v", "<leader>he", "<cmd>CodeCompanion /buffer<cr>", { desc = "Explain/Edit selection" })
+
+-- Expand selection to AI (Visual mode only)
+--vim.keymap.set("v", "hp", "<cmd>CodeCompanionChat Add<cr>", { desc = "Add selection to AI Chat" })
+-- ============================================
+-- <leader>c	--> End ChatGPT Functionalities
 
 
 
@@ -129,12 +184,20 @@ keymap.set("n", "/", "*", { noremap = true, silent = true })  -- search word und
 keymap.set("n", "<leader>/", function() require("helper").find_word() end)
 
 keymap.set("n", "<leader>mc", function() require("helper").select_colorscheme() end, { desc = "Choose colorscheme", })
+keymap.set("n", "<leader>ms", function() require("helper").toggle_themestyle() end, { desc = "Toggle dark/light mode" })
 
 keymap.set("n", "<leader>mb", "<Plug>(Marks-toggle-bookmark0)", {silent = true})
 keymap.set("n", "<leader>m]", "<Plug>(Marks-next-bookmark0)", {silent = true})
 keymap.set("n", "<leader>m[", "<Plug>(Marks-prev-bookmark0)", {silent = true})
 --keymap.set("n", "<leader>ml", "<cmd>BookmarksListAll<CR>")
 keymap.set("n", "<leader>ml", "<cmd>Telescope marks<CR>", { desc = "Telescope Marks" })
+
+vim.keymap.set("i", "<C-l>", function()
+  local view = vim.fn.winsaveview()
+  pcall(function() vim.cmd("undojoin") end)
+  vim.cmd("silent! normal! =a{")
+  vim.fn.winrestview(view)
+end, { desc = "Indent block with clean undo history", silent = true })
 
 
 -- Word/Line selection keymaps in insert mode
@@ -155,6 +218,62 @@ keymap.set("i", "<C-X>", "<Esc><Cmd>qa!<CR>", { silent = true })
 keymap.set("t", "<C-X>", [[<C-\><C-n><Cmd>qa!<CR>]], { silent = true })
 keymap.set("n", "<leader>y", '"+yiw', { silent = true })
 keymap.set("v", "<leader>y", '"+y', { silent = true })
+keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
+keymap.set('n', '<C-z>', 'u', { silent = true })
+keymap.set('i', '<C-z>', '<C-o>u', { silent = true })
+keymap.set("n", "[", "<C-o>", { silent = true }) 
+keymap.set("n", "]", "<C-i>", { silent = true })
+
+
+vim.keymap.set("n", "p", "p`[v`]=")
+vim.keymap.set("n", "P", function()
+  vim.cmd("normal! o<Esc>p`[v`]=")
+end)
+vim.keymap.set("v", "p", '"_dP`[v`]=')
+
+local function reindent_last_change_keep_cursor()
+  -- Skip special buffers (neo-tree, telescope prompt, terminals, etc.)
+  if vim.bo.buftype ~= "" then
+    return
+  end
+
+  -- Get last changed region marks
+  local start_pos = vim.fn.getpos("'[")  -- {bufnr, row, col, off}
+  local end_pos   = vim.fn.getpos("']")
+
+  local srow = start_pos[2]
+  local erow = end_pos[2]
+
+  -- If marks are not valid (no recent change/paste), do nothing
+  if srow == 0 or erow == 0 then
+    return
+  end
+
+  -- Save cursor so we don't "jump" to the marks
+  local win = vim.api.nvim_get_current_win()
+  local cur = vim.api.nvim_win_get_cursor(win)
+
+  -- Reindent from `[ to `] without polluting jumplist
+  vim.cmd("silent! keepjumps normal! `[=']")
+
+  -- Restore cursor
+  pcall(vim.api.nvim_win_set_cursor, win, cur)
+end
+
+-- Insert mode: Ctrl+Space → auto-indent last changed/pasted block
+vim.keymap.set("i", "<C-Space>", reindent_last_change_keep_cursor, {
+  silent = true,
+  desc = "Auto-indent last change/paste (insert mode)",
+})
+
+-- Fallback: some terminals send <C-@> for Ctrl+Space
+vim.keymap.set("i", "<C-@>", reindent_last_change_keep_cursor, {
+  silent = true,
+  desc = "Auto-indent last change/paste (insert mode, C-@ fallback)",
+})
+
+
+
 -- replace word under cursor with the last yanked text (register 0)
 vim.keymap.set("n", "<leader>p", function()
   local keys = vim.api.nvim_replace_termcodes([["_ciw<C-r>+<Esc>"]], true, false, true)

@@ -15,6 +15,11 @@ return {
 
 			-- setup must be called before loading
 			--vim.cmd.colorscheme "catppuccin-latte"
+			--require("yorumi").setup({variant="mist"})
+			vim.g.yorumi_variant = "mist"
+			
+			
+
 
 			require("catppuccin").setup({
 				flavour = "macchiato", -- latte, frappe, macchiato, mocha
@@ -65,10 +70,14 @@ return {
 					-- For more plugins integrations please scroll down (https://github.com/catppuccin/nvim#integrations)
 				},
 			})
+			
+			require("newpaper").setup({ style = "auto"})
+	
 
 			-- setup must be called before loading
-			vim.cmd.colorscheme "terafox"
-
+			vim.cmd.colorscheme "newpaper"  --"terafox"
+			
+			
 			local function line_info()
 				local line = vim.fn.line(".")
 				local total = vim.fn.line("$")
@@ -79,7 +88,8 @@ return {
 
 			require('lualine').setup {
 				options = {
-					theme = "terafox",
+					--theme = "terafox",
+					theme = "newpaper",
 					globalstatus = true,
 				},
 				sections = {
@@ -133,4 +143,8 @@ return {
 	{ "shaunsingh/nord.nvim" },
 	{ "rebelot/kanagawa.nvim" },
 	{ "projekt0n/github-nvim-theme" },
+	{ "olivercederborg/poimandres.nvim" },
+	{ "yorumicolors/yorumi.nvim" },
+	{ "yorik1984/newpaper.nvim" },
+	{ "NLKNguyen/papercolor-theme" },
 }

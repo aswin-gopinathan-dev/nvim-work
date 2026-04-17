@@ -14,11 +14,8 @@ return {
 				"git_status",
 				"buffers",
 			},
-
 			open_on_setup = false,
 			open_on_setup_file = false,
-			enable_git_status = true,
-			enable_diagnostics = true,
 
 			default_component_configs = {
 				git_status = {
@@ -51,6 +48,10 @@ return {
 				},
 			},
 			filesystem = {
+				bind_to_cwd = true,
+				
+				enable_git_status = true,
+				enable_diagnostics = true,
 				header = {
 					-- Set this to true to display only the project name
 					show_root_name = true,
@@ -87,6 +88,7 @@ return {
 					["y"] = "none", -- copy to clipboard
 
 					["u"] = "navigate_up",
+					["<esc>"] = function() vim.cmd("Neotree close") end,
 				},
 			},
 		})

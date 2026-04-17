@@ -23,15 +23,17 @@ local my_mappings = {
 	{ "<leader>bX", desc = "Close all but current buffer" },
 	{ "<leader>bb", desc = "File list" },
 
-
+--[[
 	-- Build
 	{ "<leader>c", name = "Build/Run", icon = { icon = "", color = "yellow" } },
 	{ "<leader>cg", desc = "CMake Generate" },
 	{ "<leader>cb", desc = "CMake Build" },
 	{ "<leader>cr", desc = "CMake Run" },
-
+]]
 	-- Window
 	{ "<leader>w", name = "Window", icon = { icon = "", color = "orange" } },
+	{ "<leader>ww", desc = "Activate code buffer" },
+	{ "<leader>wr", desc = "Resize buffers to default" },
 	{ "<leader>wh", desc = "Horizontal split" },
 	{ "<leader>wv", desc = "Vertical split" },
 	{ "<leader>we", desc = "Equalize splits" },
@@ -56,8 +58,7 @@ local my_mappings = {
 
 	-- Project Explorer
 	{ "<leader>e", name = "Explorer", icon = { icon = "", color = "yellow" } },
-	{ "<leader>ee", desc = "Toggle Explorer" },
-	{ "<leader>ef", desc = "Focus Explorer" },
+	{ "<leader>ee", desc = "Toggle/Focus Explorer" },
 	{ "<leader>ev", desc = "File Preview" },
 
 	-- Session

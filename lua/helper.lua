@@ -1,7 +1,103 @@
 local M = {}
 
--- =====================================================================
+local uv = vim.uv or vim.loop
 
+local function is_windows()
+  return vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
+end
+
+local function path_join(...)
+  local sep = package.config:sub(1, 1)
+  return table.concat({ ... }, sep)
+end
+
+local function shellescape(s)
+  return vim.fn.shellescape(s)
+end
+
+local function notify_missing_tool(tool_names)
+  vim.notify("Missing required tool: " .. tool_names, vim.log.levels.WARN)
+end
+
+local function open_with_system(target, select_file)
+  if not target or target == "" then
+    return
+  end
+
+  if is_windows() then
+    if select_file and vim.fn.filereadable(target) == 1 then
+      vim.fn.system({ "cmd.exe", "/C", 'start "" explorer.exe /select,"' .. target .. '"' })
+    else
+      vim.fn.jobstart({ "explorer.exe", target }, { detach = true })
+    end
+    return
+  end
+
+  local open_target = target
+  if select_file and vim.fn.filereadable(target) == 1 then
+    open_target = vim.fn.fnamemodify(target, ":h")
+  end
+
+  if vim.fn.executable("xdg-open") == 1 then
+    vim.fn.jobstart({ "xdg-open", open_target }, { detach = true })
+  elseif vim.fn.executable("gio") == 1 then
+    vim.fn.jobstart({ "gio", "open", open_target }, { detach = true })
+  else
+    notify_missing_tool("xdg-open or gio")
+  end
+end
+
+local function terminal_clear_command()
+  return is_windows() and "cls" or "clear"
+end
+
+local function get_python_cmd()
+  if is_windows() then
+    if vim.fn.executable("python") == 1 then
+      return "python"
+    end
+    if vim.fn.executable("py") == 1 then
+      return "py"
+    end
+  else
+    if vim.fn.executable("python3") == 1 then
+      return "python3"
+    end
+    if vim.fn.executable("python") == 1 then
+      return "python"
+    end
+  end
+
+  return nil
+end
+
+local function get_qml_cmd()
+  if is_windows() then
+    if vim.fn.executable("qml.exe") == 1 then
+      return "qml.exe"
+    end
+    if vim.fn.executable("qml") == 1 then
+      return "qml"
+    end
+    if vim.fn.executable("qmlscene.exe") == 1 then
+      return "qmlscene.exe"
+    end
+    if vim.fn.executable("qmlscene") == 1 then
+      return "qmlscene"
+    end
+  else
+    if vim.fn.executable("qml") == 1 then
+      return "qml"
+    end
+    if vim.fn.executable("qmlscene") == 1 then
+      return "qmlscene"
+    end
+  end
+
+  return nil
+end
+
+-- =====================================================================
 
 function M.manage_search_settings()
   local pickers      = require("telescope.pickers")
@@ -10,22 +106,23 @@ function M.manage_search_settings()
   local actions      = require("telescope.actions")
   local action_state = require("telescope.actions.state")
 
-  -- 1. Helper to generate the list items dynamically
   local function get_settings_list()
     local results = {
       { type = "flag", name = "Match Case", value = _G.MyConfig.case_sensitive },
       { type = "flag", name = "Whole Word", value = _G.MyConfig.match_whole_word },
     }
+
     for _, f in ipairs(_G.MyConfig.skip_folders or {}) do
       table.insert(results, { type = "folder", name = f })
     end
+
     for _, e in ipairs(_G.MyConfig.file_extensions or {}) do
       table.insert(results, { type = "extension", name = e })
     end
+
     return results
   end
 
-  -- 2. Helper to refresh the window
   local function refresh(prompt_bufnr)
     local picker = action_state.get_current_picker(prompt_bufnr)
     picker:refresh(finders.new_table({
@@ -36,7 +133,7 @@ function M.manage_search_settings()
           display = display .. ": " .. (entry.value and "ON" or "OFF")
         end
         return { value = entry, display = display, ordinal = entry.name }
-      end
+      end,
     }), { reset_prompt = true })
   end
 
@@ -51,14 +148,13 @@ function M.manage_search_settings()
           display = display .. ": " .. (entry.value and "ON" or "OFF")
         end
         return { value = entry, display = display, ordinal = entry.name }
-      end
+      end,
     }),
     sorter = conf.generic_sorter({}),
     layout_config = { width = 0.5, height = 0.5 },
     attach_mappings = function(prompt_bufnr, map)
       local win = vim.api.nvim_get_current_win()
 
-      -- TOGGLE FLAG (t)
       map("n", "t", function()
         local selection = action_state.get_selected_entry()
         if selection and selection.value.type == "flag" then
@@ -71,7 +167,6 @@ function M.manage_search_settings()
         end
       end)
 
-      -- ADD FOLDER (f)
       map("n", "f", function()
         vim.ui.input({ prompt = "Exclude Folder: " }, function(input)
           if input and input ~= "" then
@@ -86,7 +181,6 @@ function M.manage_search_settings()
         end)
       end)
 
-      -- ADD EXTENSION (e)
       map("n", "e", function()
         vim.ui.input({ prompt = "Include Extension: " }, function(input)
           if input and input ~= "" then
@@ -101,10 +195,11 @@ function M.manage_search_settings()
         end)
       end)
 
-      -- DELETE (d)
       map("n", "d", function()
         local selection = action_state.get_selected_entry()
-        if not selection or selection.value.type == "flag" then return end
+        if not selection or selection.value.type == "flag" then
+          return
+        end
 
         local target = (selection.value.type == "folder") and _G.MyConfig.skip_folders or _G.MyConfig.file_extensions
         for i, v in ipairs(target) do
@@ -136,31 +231,35 @@ end
 function M.find_word_under_cursor()
   local word = vim.fn.expand("<cword>")
   local tb = require("telescope.builtin")
+
   if word ~= nil and word ~= "" then
     tb.grep_string({
       search = word,
-      use_regex = false, -- important
-      additional_args = M.text_filter()
+      use_regex = false,
+      additional_args = M.text_filter(),
     })
   else
     tb.live_grep({
-      additional_args = M.text_filter()
+      additional_args = M.text_filter(),
     })
   end
 end
 
-function M.find_selected_word() -- Search selected text --> Press viw in normal to highlight the word under cursor
+function M.find_selected_word()
   local _, ls, cs = unpack(vim.fn.getpos("v"))
   local _, le, ce = unpack(vim.fn.getpos("."))
   local lines = vim.fn.getline(ls, le)
-  if #lines == 0 then return end
+  if #lines == 0 then
+    return
+  end
+
   lines[#lines] = string.sub(lines[#lines], 1, ce)
   lines[1] = string.sub(lines[1], cs)
   local text = table.concat(lines, "\n")
 
   require("telescope.builtin").live_grep({
     default_text = text,
-    additional_args = M.text_filter()
+    additional_args = M.text_filter(),
   })
 end
 
@@ -173,6 +272,7 @@ end
 
 function M.activate_next_window()
   local start_win = vim.api.nvim_get_current_win()
+
   local function is_neotree(win)
     local bufname = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win))
     return bufname:match("neo%-tree")
@@ -189,17 +289,88 @@ end
 
 function M.resize_window()
   local key = vim.fn.keytrans(vim.fn.getcharstr())
-  local map = {
-    ["<Left>"]  = "5<C-w><",
-    ["<Right>"] = "5<C-w>>",
-    ["<Up>"]    = "5<C-w>+",
-    ["<Down>"]  = "5<C-w>-",
-  }
+
+  local ft = vim.bo.filetype
+  local bt = vim.bo.buftype
+  local is_special = (ft == "neo-tree" or bt == "terminal")
+
+  local map
+  if is_special then
+    map = {
+      ["<Left>"]  = "3<C-w><",
+      ["<Right>"] = "3<C-w>>",
+      ["<Up>"]    = "3<C-w>+",
+      ["<Down>"]  = "3<C-w>-",
+    }
+  else
+    map = {
+      ["<Left>"]  = "3<C-w>>",
+      ["<Right>"] = "3<C-w><",
+      ["<Up>"]    = "3<C-w>-",
+      ["<Down>"]  = "3<C-w>+",
+    }
+  end
 
   local cmd = map[key]
   if cmd then
     local keys = vim.api.nvim_replace_termcodes(cmd, true, false, true)
     vim.api.nvim_feedkeys(keys, "n", false)
+  end
+end
+
+function M.activate_code_buffer()
+  local skip_filetypes = {
+    ["neo-tree"] = true,
+    ["toggleterm"] = true,
+    ["dapui_scopes"] = true,
+    ["dapui_breakpoints"] = true,
+    ["dapui_stacks"] = true,
+    ["dapui_watches"] = true,
+    ["dapui_console"] = true,
+  }
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    local ft = vim.bo[buf].filetype
+
+    if not skip_filetypes[ft] then
+      vim.api.nvim_set_current_win(win)
+      break
+    end
+  end
+end
+
+function M.reset_buffers_to_default_size()
+  local cur_win = vim.api.nvim_get_current_win()
+
+  require("neo-tree.command").execute({ action = "show", position = "left" })
+
+  local neotree_win = nil
+  local term_win = nil
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    local ft = vim.bo[buf].filetype
+
+    if ft == "neo-tree" then
+      neotree_win = win
+    elseif ft == "toggleterm" then
+      term_win = win
+    end
+  end
+
+  if neotree_win and vim.api.nvim_win_is_valid(neotree_win) then
+    vim.api.nvim_win_set_width(neotree_win, 35)
+    vim.wo[neotree_win].winfixwidth = true
+  end
+
+  if term_win and vim.api.nvim_win_is_valid(term_win) then
+    vim.api.nvim_win_set_height(term_win, 9)
+    vim.wo[term_win].winfixheight = true
+  end
+
+  if vim.api.nvim_win_is_valid(cur_win) then
+    vim.api.nvim_set_current_win(cur_win)
   end
 end
 
@@ -214,21 +385,18 @@ local function close_quickfix()
   end
 end
 
-
 function M.open_terminal_floating()
   close_quickfix()
   local cwd = vim.fn.getcwd()
-  vim.cmd(string.format("ToggleTerm dir=%s direction=float", cwd))
+  vim.cmd(string.format("ToggleTerm dir=%s direction=float", shellescape(cwd)))
 end
 
 function M.open_terminal_horizontal()
   close_quickfix()
   local cwd = vim.fn.getcwd()
-  vim.cmd(string.format("ToggleTerm dir=%s direction=horizontal", cwd))
+  vim.cmd(string.format("ToggleTerm dir=%s direction=horizontal", shellescape(cwd)))
 end
 
--- Preview the SVG PathSvg { path: "..." } under cursor
--- Usage: put cursor anywhere inside the quoted path string, press the shortcut
 function M.preview_svg()
   vim.cmd([[normal! "vyi"]])
   local path = vim.fn.getreg("v")
@@ -243,63 +411,80 @@ function M.preview_svg()
   local fill = "#000000"
 
   local svg = string.format([[
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="%s" width="%d" height="%d">
-				<path d="%s" fill="%s"/>
-				</svg>
-			]], viewBox, width, height, path, fill)
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="%s" width="%d" height="%d">
+  <path d="%s" fill="%s"/>
+</svg>
+]], viewBox, width, height, path, fill)
 
-  local tempdir = vim.env.TEMP or vim.env.TMP or "."
-  local outfile = tempdir .. "\\qml_path_preview.svg"
+  local tempdir = vim.env.TMPDIR or vim.env.TEMP or vim.env.TMP or "/tmp"
+  local outfile = path_join(tempdir, "qml_path_preview.svg")
 
   local f, err = io.open(outfile, "w")
   if not f then
     vim.notify("Failed to write SVG: " .. tostring(err), vim.log.levels.ERROR)
     return
   end
+
   f:write(svg)
   f:close()
 
-  local cmd = string.format([[cmd.exe /c start "" "%s"]], outfile)
-  vim.fn.jobstart(cmd, { detach = true })
+  open_with_system(outfile, false)
 end
 
-local function launch_app(pgm)
-  local Terminal = require("toggleterm.terminal").Terminal
+local terminal = require("toggleterm.terminal")
+local Terminal = terminal.Terminal
+local RUN_TERM_COUNT = 99
 
-  -- create (or reuse) a normal shell
-  if not _G.entrypoint_term then
-    _G.entrypoint_term = Terminal:new({
+local function get_run_term()
+  local term = terminal.get(RUN_TERM_COUNT)
+  if not term then
+    term = Terminal:new({
+      id = RUN_TERM_COUNT,
       direction = "horizontal",
       close_on_exit = false,
       hidden = false,
     })
   end
+  return term
+end
 
-  if not _G.entrypoint_term:is_open() then
-    _G.entrypoint_term:open()
+local function launch_app(pgm)
+  local term = get_run_term()
+
+  if not term:is_open() then
+    term:open(9)
+  else
+    term:focus()
   end
 
-  -- send command AFTER terminal is ready
   vim.defer_fn(function()
-    _G.entrypoint_term:send("cls", true)
-    _G.entrypoint_term:send(pgm, true)
+    term:send(terminal_clear_command(), true)
+    term:send(pgm, true)
   end, 50)
 end
 
-
 function M.run_app()
   local src_buf = vim.api.nvim_get_current_buf()
-  local file    = vim.api.nvim_buf_get_name(src_buf) -- absolute path or "" for non-file buffers
-  local ext     = vim.fn.fnamemodify(file, ":e")
-
-  local cwd     = vim.fn.getcwd()
-  local drive   = cwd:sub(1, 2)
+  local file = vim.api.nvim_buf_get_name(src_buf)
+  local ext = vim.fn.fnamemodify(file, ":e")
 
   local cmd
   if ext == "qml" then
-    cmd = string.format('qml.exe "%s"', file)
+    local qml_cmd = get_qml_cmd()
+    if not qml_cmd then
+      notify_missing_tool("qml or qmlscene")
+      return
+    end
+    cmd = string.format('%s "%s"', qml_cmd, file)
   else
-    cmd = "python .\\entrypoint.py"
+    local python_cmd = get_python_cmd()
+    if not python_cmd then
+      notify_missing_tool("python / python3")
+      return
+    end
+
+    local entrypoint = path_join(vim.fn.getcwd(), "entrypoint.py")
+    cmd = string.format('%s "%s"', python_cmd, entrypoint)
   end
 
   launch_app(cmd)
@@ -308,14 +493,23 @@ end
 function M.run_app2()
   vim.cmd("write")
   vim.cmd("stopinsert")
-  launch_app("python .\\entrypoint.py")
+
+  local python_cmd = get_python_cmd()
+  if not python_cmd then
+    notify_missing_tool("python / python3")
+    return
+  end
+
+  local entrypoint = path_join(vim.fn.getcwd(), "entrypoint.py")
+  launch_app(string.format('%s "%s"', python_cmd, entrypoint))
 end
 
 function M.close_terminal()
   local ok, term = pcall(require, "toggleterm.terminal")
-  if not ok then return end
+  if not ok then
+    return
+  end
 
-  -- Close all open toggleterm terminals
   for _, t in pairs(term.get_all()) do
     if t:is_open() then
       t:close()
@@ -334,19 +528,8 @@ local function open_explorer(path)
   end
 
   path = vim.fn.fnamemodify(path, ":p")
-  path = path:gsub("/", "\\")
-
-  local is_file = vim.fn.filereadable(path) == 1
-  local cmd
-  if is_file then
-    cmd = 'start "" explorer.exe /select,"' .. path .. '"'
-  else
-    cmd = 'start "" explorer.exe "' .. path .. '"'
-  end
-
-  vim.fn.system({ "cmd.exe", "/C", cmd })
+  open_with_system(path, true)
 end
-
 
 function M.preview_file()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -358,7 +541,7 @@ function M.preview_file()
       local state = manager.get_state("filesystem")
       local node = state.tree:get_node()
       if node and node.path then
-        vim.fn.jobstart({ "cmd.exe", "/c", "start", '""', node.path }, { detach = true })
+        open_with_system(node.path, false)
       end
     end
   else
@@ -374,43 +557,39 @@ function M.find_word()
       return
     end
 
-    vim.fn.setreg("/", input)
-    local found = vim.fn.search(input, "nw")
+    local pattern = [[\c\V]] .. input
+    vim.fn.setreg("/", pattern)
+
+    local found = vim.fn.search(pattern, "nw")
     if found == 0 then
       vim.notify("Text not found: " .. input, vim.log.levels.INFO)
       return
     end
 
-    vim.cmd("silent! normal! n")
+    vim.cmd("normal! n")
+    vim.fn.histadd("search", pattern)
   end)
 end
 
 function M.text_filter()
-  local args = { "--fixed-strings" } -- remove if you want fuzzy matching
+  local args = { "--fixed-strings" }
 
-  -- Check the global flag for whole word matching
   if _G.MyConfig.match_whole_word then
     table.insert(args, "--word-regexp")
   end
 
-  -- Check the global flag for Match case
   if _G.MyConfig.case_sensitive then
     table.insert(args, "--case-sensitive")
   else
-    -- Optional: explicitly add ignore-case if the global is false
     table.insert(args, "--ignore-case")
   end
 
-  -- Folders to exclude
   for _, name in ipairs(_G.MyConfig.skip_folders or {}) do
-    -- turns "env" into "!**/env/**"
     table.insert(args, "--glob")
     table.insert(args, "!**/" .. name .. "/**")
   end
 
-  -- File types to include (optional; empty = no type filter)
   for _, ext in ipairs(_G.MyConfig.file_extensions or {}) do
-    -- turns "py" into "**/*.py"
     table.insert(args, "--glob")
     table.insert(args, "**/*." .. ext)
   end
@@ -419,7 +598,6 @@ function M.text_filter()
 end
 
 local function lua_pat_escape(s)
-  -- Escape Lua pattern magic characters
   return (s:gsub("([%%%^%$%(%)%.%[%]%*%+%-%?])", "%%%1"))
 end
 
@@ -439,23 +617,19 @@ local filter_buf = nil
 function M.show_find_filters()
   local path = vim.fn.stdpath("config") .. "/lua/config/search_filters.lua"
 
-  -- If popup window is already open, just focus it
   if filter_win and vim.api.nvim_win_is_valid(filter_win) then
     vim.api.nvim_set_current_win(filter_win)
     return
   end
 
-  -- Reuse existing buffer if it exists, otherwise create one
   filter_buf = vim.fn.bufadd(path)
-  vim.fn.bufload(filter_buf) -- load file into buffer
+  vim.fn.bufload(filter_buf)
   vim.bo[filter_buf].buflisted = false
 
-  -- Popup size
-  local width                  = math.floor(vim.o.columns * 0.45)
-  local height                 = math.floor(vim.o.lines * 0.65)
+  local width = math.floor(vim.o.columns * 0.45)
+  local height = math.floor(vim.o.lines * 0.65)
 
-  -- Open floating window with that buffer
-  filter_win                   = vim.api.nvim_open_win(filter_buf, true, {
+  filter_win = vim.api.nvim_open_win(filter_buf, true, {
     relative = "editor",
     width = width,
     height = height,
@@ -467,22 +641,17 @@ function M.show_find_filters()
     title_pos = "center",
   })
 
-  -- Close helper
   local function close()
     if filter_win and vim.api.nvim_win_is_valid(filter_win) then
       vim.api.nvim_win_close(filter_win, true)
     end
     filter_win = nil
-    -- we intentionally do NOT delete the buffer; it stays in the buffer list
-    -- so next time we can reuse it via bufadd(path)
   end
 
-  -- q / <Esc> to close (buffer-local)
   vim.keymap.set("n", "q", close, { buffer = filter_buf, nowait = true })
   vim.keymap.set("n", "<Esc>", close, { buffer = filter_buf, nowait = true })
 end
 
--- 🔹 Colorscheme switcher
 local themes = {
   "dayfox",
   "nightfox",
@@ -510,7 +679,10 @@ local themes = {
   "github_light",
   "github_light_default",
   "github_light_high_contrast",
-
+  "poimandres",
+  "yorumi",
+  "newpaper",
+  "PaperColor",
 }
 
 function M.select_colorscheme()
@@ -524,15 +696,47 @@ function M.select_colorscheme()
   end)
 end
 
--- =====================================================================
+function M.toggle_themestyle()
+    -- 1. Determine the target style
+    local target_style = (vim.o.background == "dark") and "light" or "dark"
 
+    -- 2. Clear old highlight definitions to prevent "ghost" colors
+    vim.cmd("hi clear")
+    if vim.fn.exists("syntax_on") then
+        vim.cmd("syntax reset")
+    end
+
+    -- 3. Apply the theme properly
+    if target_style == "light" then
+        vim.cmd("NewpaperLight")
+    else
+        vim.cmd("NewpaperDark")
+    end
+
+    -- 4. Schedule the Bufferline refresh to ensure the theme is fully loaded first
+    vim.schedule(function()
+        local status_ok, bufferline = pcall(require, "bufferline")
+        if status_ok then
+            -- Grab your existing options
+            local bl_config = require("bufferline.config")
+            
+            -- Force re-setup with existing options to trigger color re-calculation
+            bufferline.setup({
+                options = bl_config.options or {}
+            })
+            
+            -- Force a screen redraw to clean up any artifacts
+            vim.cmd("redraw!")
+        end
+    end)
+end
 
 -- =====================================================================
 
 function M.close_debugger()
-  require 'dap'.disconnect({ terminateDebuggee = true })
-  require 'dap'.close()
-  require 'dapui'.close()
+  require("dap").disconnect({ terminateDebuggee = true })
+  require("dap").close()
+  require("dapui").close()
 end
 
 local function dapui_preset(left_idx, bottom_idx)
@@ -547,16 +751,13 @@ local function dapui_preset(left_idx, bottom_idx)
   end
 end
 
-
 local function get_visual_selection_exact()
-  -- save/restore a scratch register (z)
-  local save, savetype = vim.fn.getreg('z'), vim.fn.getregtype('z')
-  vim.cmd([[silent noautocmd normal! "zy]]) -- yank current visual selection to register z
-  local text = vim.fn.getreg('z')
-  vim.fn.setreg('z', save, savetype)        -- restore register z
+  local save, savetype = vim.fn.getreg("z"), vim.fn.getregtype("z")
+  vim.cmd([[silent noautocmd normal! "zy]])
+  local text = vim.fn.getreg("z")
+  vim.fn.setreg("z", save, savetype)
   return text
 end
-
 
 function M.add_debug_watch()
   local expr = get_visual_selection_exact()
@@ -566,7 +767,7 @@ function M.add_debug_watch()
 
   if expr ~= "" then
     local ok, err = pcall(function()
-      require('dapui').elements.watches.add(expr)
+      require("dapui").elements.watches.add(expr)
     end)
     if not ok then
       vim.notify("Failed to add watch: " .. tostring(err), vim.log.levels.WARN)
@@ -579,34 +780,29 @@ function M.add_debug_watch()
 end
 
 local layouts = {
-  { label = "Full",      scopes = 1,   console = 4 },
-  { label = "Variables", scopes = 1,   console = nil },
-  { label = "Locals",    scopes = 2,   console = nil },
-  { label = "Watch",     scopes = 3,   console = nil },
-  { label = "Stack",     scopes = 6,   console = nil },
-  { label = "Console",   scopes = nil, console = 5 },
+  { label = "Full", scopes = 1, console = 4 },
+  { label = "Variables", scopes = 1, console = nil },
+  { label = "Locals", scopes = 2, console = nil },
+  { label = "Watch", scopes = 3, console = nil },
+  { label = "Stack", scopes = 6, console = nil },
+  { label = "Console", scopes = nil, console = 5 },
 }
 
 function M.select_debug_layout()
-  vim.ui.select(
-    layouts,
-    {
-      prompt = "DAP UI layout:",
-      format_item = function(item)
-        return item.label
-      end,
-    },
-    function(choice)
-      if not choice then
-        return
-      end
-      dapui_preset(choice.scopes, choice.console)
+  vim.ui.select(layouts, {
+    prompt = "DAP UI layout:",
+    format_item = function(item)
+      return item.label
+    end,
+  }, function(choice)
+    if not choice then
+      return
     end
-  )
+    dapui_preset(choice.scopes, choice.console)
+  end)
 end
 
 function M.close_floating_windows()
-  -- Close diagnostic float if one exists
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local config = vim.api.nvim_win_get_config(win)
     if config.relative ~= "" then
@@ -615,7 +811,6 @@ function M.close_floating_windows()
     end
   end
 
-  -- Otherwise behave like normal <Esc>
   vim.cmd("nohlsearch")
 end
 
@@ -645,36 +840,29 @@ end
 
 -- =====================================================================
 
+function M.smart_close_buffer(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
 
--- =====================================================================
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
 
-
--- =====================================================================
-
-
--- =====================================================================
-
-
--- =====================================================================
-
-
--- =====================================================================
-
-function M.smart_close_buffer()
-  -- Closing the current buffer will mess up the dimensions of other buffers (like neotree, terminal) in the
-  -- current window. Avoid this by switching to another buffer on closing the current buffer.
-  local bufnr = vim.api.nvim_get_current_buf()
   local listed = vim.fn.getbufinfo({ buflisted = 1 })
+
   if #listed > 1 then
-    vim.cmd("bprevious")
+    if bufnr == vim.api.nvim_get_current_buf() then
+      vim.cmd("bprevious")
+    else
+      vim.cmd("buffer " .. listed[1].bufnr)
+    end
   else
     vim.cmd("enew")
   end
+
   vim.cmd("bdelete " .. bufnr)
 end
 
 -- =====================================================================
-
 
 function M.get_files_list()
   local pickers      = require("telescope.pickers")
@@ -683,8 +871,7 @@ function M.get_files_list()
   local actions      = require("telescope.actions")
   local action_state = require("telescope.actions.state")
 
-  -- Get all listed buffers
-  local bufs         = vim.fn.getbufinfo({ buflisted = 1 })
+  local bufs = vim.fn.getbufinfo({ buflisted = 1 })
   if vim.tbl_isempty(bufs) then
     vim.notify("No listed buffers", vim.log.levels.INFO)
     return
@@ -704,10 +891,10 @@ function M.get_files_list()
       entry_maker = function(buf)
         local name = buf.name ~= "" and buf.name or "[No Name]"
         return {
-          value   = buf,
-          ordinal = name,                           -- for sorting
-          display = vim.fn.fnamemodify(name, ":t"), -- 👈 filename only
-          bufnr   = buf.bufnr,
+          value = buf,
+          ordinal = name,
+          display = vim.fn.fnamemodify(name, ":t"),
+          bufnr = buf.bufnr,
         }
       end,
     }),
@@ -715,7 +902,7 @@ function M.get_files_list()
     previewer = false,
     layout_strategy = "center",
     layout_config = {
-      width  = 0.35,
+      width = 0.35,
       height = 0.80,
     },
     attach_mappings = function(prompt_bufnr, map)
@@ -726,34 +913,34 @@ function M.get_files_list()
           vim.api.nvim_set_current_buf(entry.bufnr)
         end
       end)
+
       map("n", "x", function()
         local picker = action_state.get_current_picker(prompt_bufnr)
         local entry = action_state.get_selected_entry()
-        if not entry or not entry.bufnr then return end
+        if not entry or not entry.bufnr then
+          return
+        end
 
         local row = picker:get_selection_row()
 
-        -- delete buffer
         vim.api.nvim_buf_delete(entry.bufnr, { force = false })
 
-        -- refresh results
         picker:refresh(
           finders.new_table({
             results = vim.fn.getbufinfo({ buflisted = 1 }),
             entry_maker = function(buf)
               local name = buf.name ~= "" and buf.name or "[No Name]"
               return {
-                value   = buf,
+                value = buf,
                 ordinal = name,
                 display = vim.fn.fnamemodify(name, ":t"),
-                bufnr   = buf.bufnr,
+                bufnr = buf.bufnr,
               }
             end,
           }),
           { reset_prompt = false }
         )
 
-        -- move cursor to same row (or next if last)
         local new_count = #vim.fn.getbufinfo({ buflisted = 1 })
         if row >= new_count then
           row = new_count - 1

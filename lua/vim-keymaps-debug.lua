@@ -37,6 +37,8 @@ function M.MapLspKeys(ev)
 	keymap.set("n", "<leader>h[", vim.diagnostic.goto_prev, vim.tbl_extend("force", opts, {desc="Go to previous diagnostic"}))
 	keymap.set("n", "<leader>h]", vim.diagnostic.goto_next, vim.tbl_extend("force", opts, {desc="Go to next diagnostic"}))
 	keymap.set("n", "<Esc>", helper.close_floating_windows, { desc = "Close floating windows / clear hlsearch" })
+	
+	keymap.set("n", "g", "<cmd>Telescope lsp_definitions<CR>", vim.tbl_extend("force", opts, {silent = true}))
 	-- ====================================================
 	-- <leader>h	--> End LSP Functionalities
 end

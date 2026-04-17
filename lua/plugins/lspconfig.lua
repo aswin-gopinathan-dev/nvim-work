@@ -30,6 +30,7 @@ return {
         vim.api.nvim_create_autocmd("LspAttach", {
             group = vim.api.nvim_create_augroup("UserLspConfig", {}),
             callback = function(ev)
+                require("vim-keymaps-debug").MapLspKeys(ev)
 				if (vim.g.restoring_session ~= nil and vim.g.restoring_session) or vim.api.nvim_get_current_buf() ~= ev.buf then
 					return
 				end
@@ -42,7 +43,7 @@ return {
                 end
 
                 -- Map custom keys from your external module
-                require("vim-keymaps-debug").MapLspKeys(ev)
+                -- require("vim-keymaps-debug").MapLspKeys(ev)
             end,
         })
 
@@ -55,7 +56,10 @@ return {
         local servers = { "lua_ls", "clangd", "pyright", "ruff", "qmlls" }
 
         -- Custom command for qmlls if needed
-        vim.lsp.config("qmlls", { cmd = { "qmlls", "-E" } })
+        if vim.fn.executable("qmlls") == 1 then
+          vim.lsp.config("qmlls", { cmd = { "qmlls", "-E" } })
+          table.insert(servers, "qmlls")
+        end
 
         -- Activate all servers
         vim.lsp.enable(servers)
