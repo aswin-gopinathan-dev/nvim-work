@@ -11,14 +11,14 @@ return {
 		require('neo-tree').setup({
 			sources = {
 				'filesystem',
-				"git_status",
+				--"git_status",
 				"buffers",
 			},
 			open_on_setup = false,
 			open_on_setup_file = false,
 
 			default_component_configs = {
-				git_status = {
+				--[[git_status = {
 					symbols = {
 						-- Change type
 						added     = "✚",
@@ -31,26 +31,26 @@ return {
 						staged    = "",
 						conflict  = "",
 					},
-				},
+				},--]]
 			},
 			renderers = {
 				file = {
-					{ "git_status" },
+					--{ "git_status" },
 					{ "indent" },
 					{ "icon" },
-					{ "name",      use_git_status_colors = true },
+					{ "name"}, --      use_git_status_colors = true },
 				},
 				directory = {
 					{ "indent" },
 					{ "icon" },
-					{ "name",      use_git_status_colors = true },
-					{ "git_status" },
+					{ "name"}, --     use_git_status_colors = true },
+					--{ "git_status" },
 				},
 			},
 			filesystem = {
 				bind_to_cwd = true,
 				
-				enable_git_status = true,
+				-- enable_git_status = true,
 				enable_diagnostics = true,
 				header = {
 					-- Set this to true to display only the project name
@@ -59,7 +59,7 @@ return {
 				filtered_items = {
 					visible = false,
 					hide_dotfiles = false,
-					hide_gitignored = false,
+					-- hide_gitignored = false,
 					hide_by_name = {
 						".DS_Store",
 						--".git",

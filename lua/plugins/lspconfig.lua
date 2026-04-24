@@ -55,11 +55,24 @@ return {
         -- Note: 'ruff_lsp' is deprecated; Nvim 0.11 uses 'ruff' natively
         local servers = { "lua_ls", "clangd", "pyright", "ruff", "qmlls" }
 
-        -- Custom command for qmlls if needed
-        if vim.fn.executable("qmlls") == 1 then
-          vim.lsp.config("qmlls", { cmd = { "qmlls", "-E" } })
-          table.insert(servers, "qmlls")
-        end
+        -- Define specific settings for each server to avoid "overlap"
+        vim.lsp.config("pyright", {
+            filetypes = { "python" },
+            -- Ensure pyright looks for your entrypoint.py or scripts folder
+            root_dir = vim.fs.root(0, { "sagacity", "entrypoint.py", "pyproject.toml", ".git" }),
+        })
+
+        vim.lsp.config("clangd", {
+            filetypes = { "cpp", "c", "objc", "objcpp", "cuda", "proto" },
+            root_dir = vim.fs.root(0, { "CMakeLists.txt", "build", ".git" }),
+        })
+
+        vim.lsp.config("qmlls", {
+            cmd = { "qmlls", "-E" },
+            filetypes = { "qml", "qmljs" },
+            -- Specifically look for QML project markers
+            root_dir = vim.fs.root(0, { "main.qml", "qmldir", ".git" }),
+        })
 
         -- Activate all servers
         vim.lsp.enable(servers)

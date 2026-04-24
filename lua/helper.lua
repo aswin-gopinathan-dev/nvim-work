@@ -24,11 +24,17 @@ local function open_with_system(target, select_file)
     return
   end
 
+  target = vim.fn.fnamemodify(target, ":p")
+
   if is_windows() then
+    local win_target = target:gsub("/", "\\")
+
     if select_file and vim.fn.filereadable(target) == 1 then
-      vim.fn.system({ "cmd.exe", "/C", 'start "" explorer.exe /select,"' .. target .. '"' })
+      local cmd = 'start "" explorer.exe /select,"' .. win_target .. '"'
+      vim.fn.system({ "cmd.exe", "/C", cmd })
     else
-      vim.fn.jobstart({ "explorer.exe", target }, { detach = true })
+      local cmd = 'start "" explorer.exe "' .. win_target .. '"'
+      vim.fn.system({ "cmd.exe", "/C", cmd })
     end
     return
   end
@@ -338,6 +344,32 @@ function M.activate_code_buffer()
       break
     end
   end
+end
+
+function M.code_only_view()
+  -- 1. Close Neo-tree
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "neo-tree" then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+
+  -- 2. Close all toggleterm terminals
+  pcall(function()
+    require("helper").close_terminal()
+  end)
+
+  -- 3. Close floating windows (optional but useful)
+  pcall(function()
+    require("helper").close_floating_windows()
+  end)
+
+  -- 4. Close quickfix if open
+  vim.cmd("cclose")
+
+  -- 5. Focus code buffer (final step)
+  require("helper").activate_code_buffer()
 end
 
 function M.reset_buffers_to_default_size()
@@ -697,35 +729,35 @@ function M.select_colorscheme()
 end
 
 function M.toggle_themestyle()
-    -- 1. Determine the target style
-    local target_style = (vim.o.background == "dark") and "light" or "dark"
+    -- 1. Determine the target style based on current background
+    local target_is_dark = (vim.o.background == "light")
 
-    -- 2. Clear old highlight definitions to prevent "ghost" colors
+    -- 2. Clear old highlight definitions
     vim.cmd("hi clear")
     if vim.fn.exists("syntax_on") then
         vim.cmd("syntax reset")
     end
 
-    -- 3. Apply the theme properly
-    if target_style == "light" then
-        vim.cmd("NewpaperLight")
+    -- 3. Apply the specific themes
+    if target_is_dark then
+        -- Set background first so plugins know what's happening
+        vim.o.background = "dark"
+        -- Load Nightfox (standard dark)
+        vim.cmd("colorscheme nightfox")
     else
-        vim.cmd("NewpaperDark")
+        vim.o.background = "light"
+        -- Load Newpaper's specific light command
+        vim.cmd("NewpaperLight")
     end
 
-    -- 4. Schedule the Bufferline refresh to ensure the theme is fully loaded first
+    -- 4. Schedule the Bufferline refresh
     vim.schedule(function()
         local status_ok, bufferline = pcall(require, "bufferline")
         if status_ok then
-            -- Grab your existing options
             local bl_config = require("bufferline.config")
-            
-            -- Force re-setup with existing options to trigger color re-calculation
             bufferline.setup({
                 options = bl_config.options or {}
             })
-            
-            -- Force a screen redraw to clean up any artifacts
             vim.cmd("redraw!")
         end
     end)

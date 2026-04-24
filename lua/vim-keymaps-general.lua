@@ -3,8 +3,8 @@ local keymap = vim.keymap
 
 -- <leader>f	--> Begin Find Functionalities
 -- ===========================================
-keymap.set("n", "<leader>fs", function() require("telescope.builtin").live_grep({hidden = true, no_ignore = false, additional_args = require("helper").text_filter() }) end)
-keymap.set("n", "<leader>ff", function() require("telescope.builtin").find_files({hidden = true, no_ignore = false, file_ignore_patterns = require("helper").folder_filter(), sorter = require("telescope.sorters").get_substr_matcher({case_mode = "ignore_case"}), case_mode = "ignore_case",}) end)
+keymap.set("n", "<leader>fs", function() require("telescope.builtin").live_grep({cwd = vim.loop.cwd(), hidden = true, no_ignore = false, additional_args = require("helper").text_filter() }) end)
+keymap.set("n", "<leader>ff", function() require("telescope.builtin").find_files({cwd = vim.loop.cwd(), hidden = true, no_ignore = false, find_command = { "fd", "--type", "f", "--strip-cwd-prefix" }, file_ignore_patterns = require("helper").folder_filter(), sorter = require("telescope.sorters").get_substr_matcher({case_mode = "ignore_case"}), case_mode = "ignore_case",}) end)
 keymap.set("n", "<leader>fg", function() require("telescope.builtin").resume() end, { desc = "Resume last find" })
 keymap.set("n", "<leader>fh", function() require("spectre").open() end, { desc = "Replace string" })
 keymap.set("n", "<leader>fo", function() require("telescope.builtin").oldfiles() end, { desc = "Find old files" })
@@ -56,6 +56,9 @@ keymap.set("n", "<leader>w", function() require("helper").resize_window() end)
 keymap.set({"n", "t"}, '<leader>w]', function() require("helper").activate_next_window() end)
 keymap.set("n", "<leader>wr", function() require("helper").reset_buffers_to_default_size() end)
 keymap.set({"n", "t"}, "<leader>ww", function() require("helper").activate_code_buffer() end)
+keymap.set("n", "<A-w>", function()  require("helper").code_only_view() end, { silent = true })
+keymap.set("i", "<A-w>", function()  vim.cmd("stopinsert") require("helper").code_only_view() end, { silent = true })
+keymap.set("t", "<A-w>", [[<C-\><C-n><Cmd>lua require("helper").code_only_view()<CR>]], { silent = true })
 -- ===========================================
 -- <leader>w	--> End Window Functionalities
 
@@ -123,7 +126,7 @@ keymap.set("n", "<leader>ee", function()
   if neotree_win then
     vim.api.nvim_set_current_win(neotree_win)
   else
-    vim.cmd("Neotree show")
+    vim.cmd("Neotree show focus")
   end
 end, { desc = "Open/focus Neo-tree" })
 

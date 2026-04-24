@@ -75,7 +75,13 @@ return {
 	
 
 			-- setup must be called before loading
-			vim.cmd.colorscheme "newpaper"  --"terafox"
+			--vim.cmd.colorscheme "newpaper"  --"terafox"
+			
+			vim.cmd.colorscheme "PaperColor"
+			vim.api.nvim_set_hl(0, "TabLineFill", {
+				fg = "#303030",
+				bg = "#eeeeee",
+			  })
 			
 			
 			local function line_info()
