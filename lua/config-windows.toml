@@ -1,4 +1,4 @@
-active_target = "bias_tests"
+active_target = "sagacity_desktop"
 
 python = "sagacity/Scripts/python.exe"
 codelldb = "packages/codelldb/extension/adapter/codelldb.exe"

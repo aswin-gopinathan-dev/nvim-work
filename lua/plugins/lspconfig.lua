@@ -63,6 +63,7 @@ return {
         })
 
         vim.lsp.config("clangd", {
+            cmd = { "clangd", "--function-arg-placeholders=false", },
             filetypes = { "cpp", "c", "objc", "objcpp", "cuda", "proto" },
             root_dir = vim.fs.root(0, { "CMakeLists.txt", "build", ".git" }),
         })

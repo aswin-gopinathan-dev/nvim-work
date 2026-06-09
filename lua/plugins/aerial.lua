@@ -7,7 +7,7 @@ return {
 	},
 	config = function()
 		require("aerial").setup({
-			backends = { "lsp", "treesitter" },
+			backends = { "treesitter", "lsp" },
 
 			layout = {
 				default_direction = "float",
@@ -19,7 +19,8 @@ return {
 				relative = "editor", -- or "win"
 			},
 
-			manage_folds = true,
+			manage_folds = false,
+			sort_by = "name",
 
 			keymaps = {
 				["<leader>"] = "actions.tree_toggle", -- expand/collapse

@@ -1,11 +1,13 @@
 return {
 	{
 		"EdenEast/nightfox.nvim",
+		--lazy=true,
 
 		dependencies = {
 			"nvim-lualine/lualine.nvim",
 			"nvim-tree/nvim-web-devicons",
 			"catppuccin/nvim",
+			"rktjmp/lush.nvim",
 		},
 		config = function()
 			vim.cmd.colorscheme "dayfox"
@@ -144,13 +146,21 @@ return {
 	},
 
 	-- 🔹 Other themes (installed but NOT auto-applied)
-	{ "sainnhe/gruvbox-material" },
+	{ "sainnhe/gruvbox-material", lazy = true },
 	{ "olimorris/onedarkpro.nvim" },
-	{ "shaunsingh/nord.nvim" },
-	{ "rebelot/kanagawa.nvim" },
+	{ "shaunsingh/nord.nvim", lazy = true },
+	{ "rebelot/kanagawa.nvim", lazy = true },
 	{ "projekt0n/github-nvim-theme" },
-	{ "olivercederborg/poimandres.nvim" },
-	{ "yorumicolors/yorumi.nvim" },
+	{ "olivercederborg/poimandres.nvim", lazy = true },
+	{ "yorumicolors/yorumi.nvim", lazy = true },
 	{ "yorik1984/newpaper.nvim" },
 	{ "NLKNguyen/papercolor-theme" },
+	{ 'ayu-theme/ayu-vim', lazy = true},
+    { 'scottmckendry/cyberdream.nvim', lazy = true},
+    { 'mofiqul/adwaita.nvim' },
+    { 'sainnhe/everforest', lazy = true },
+    { 'letorbi/vim-colors-modern-borland' },
+    { 'lmintmate/blue-mood-vim' },
+    { "mhartington/oceanic-next" },
+    { 'uloco/bluloco.nvim' }, 
 }

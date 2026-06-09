@@ -23,6 +23,9 @@ local my_mappings = {
 	{ "<leader>bX", desc = "Close all but current buffer" },
 	{ "<leader>bb", desc = "File list" },
 
+
+	-- ChatGPT
+	{ "<leader>c", name = "ChatGPT", icon = { icon = "", color = "yellow" } },
 --[[
 	-- Build
 	{ "<leader>c", name = "Build/Run", icon = { icon = "", color = "yellow" } },

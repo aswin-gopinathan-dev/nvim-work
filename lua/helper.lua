@@ -522,18 +522,55 @@ function M.run_app()
   launch_app(cmd)
 end
 
+function M.build_app()
+  vim.cmd("write")
+  vim.cmd("stopinsert")
+  
+  local ok, platform = pcall(require, "platform")
+  local cfg, active_target = platform.get_active_target()
+  local target = cfg[active_target]
+  
+  if active_target == "3D" then
+    local build_path = platform.resolve(target.build_dir or ".")
+
+    local cmd = string.format(
+      'cd "%s" && make',
+      build_path
+    )
+
+    launch_app(cmd)
+  end
+end
+
 function M.run_app2()
   vim.cmd("write")
   vim.cmd("stopinsert")
+  
+  
+  local ok, platform = pcall(require, "platform")
+  local cfg, active_target = platform.get_active_target()
+  local target = cfg[active_target]
 
-  local python_cmd = get_python_cmd()
-  if not python_cmd then
-    notify_missing_tool("python / python3")
+  if active_target == "sagacity_desktop" then
+    local python_cmd = get_python_cmd()
+    if not python_cmd then
+      notify_missing_tool("python / python3")
+      return
+    end
+
+    local entrypoint = path_join(vim.fn.getcwd(), "entrypoint.py")
+    launch_app(string.format('%s "%s"', python_cmd, entrypoint))
+  end
+  
+  if active_target == "3D" then
+    local program = target.program
+    if target.build_dir and target.build_dir ~= "" then
+      program = path_join(target.build_dir, target.program)
+    end
+
+    launch_app(string.format('"%s"', program))
     return
   end
-
-  local entrypoint = path_join(vim.fn.getcwd(), "entrypoint.py")
-  launch_app(string.format('%s "%s"', python_cmd, entrypoint))
 end
 
 function M.close_terminal()
@@ -715,6 +752,13 @@ local themes = {
   "yorumi",
   "newpaper",
   "PaperColor",
+  "cyberdream",
+  "adwaita",
+  "everforest",
+  "borland",
+  "blue-mood",
+  "OceanicNext",
+  "bluloco-dark",
 }
 
 function M.select_colorscheme()

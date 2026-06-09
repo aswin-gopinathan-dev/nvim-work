@@ -81,8 +81,18 @@ keymap.set("n", "<leader>gE", "G$")    -- go to end of current line
 
 -- <leader>t	--> Begin Terminal Functionalities
 -- ===============================================
-keymap.set("n", "<leader>tf", function() require("helper").open_terminal_floating() end, { desc = "Open Floating Terminal" })
-keymap.set("n", "<leader>tt", function() require("helper").open_terminal_horizontal() end, { desc = "Open Horizontal Terminal" })
+keymap.set("n", "<leader>tf", function()
+    require("helper").open_terminal_floating()
+    vim.schedule(function()
+        vim.cmd("startinsert")
+    end)
+end, { desc = "Open Floating Terminal" })
+keymap.set("n", "<leader>tt", function()
+    require("helper").open_terminal_horizontal()
+    vim.schedule(function()
+        vim.cmd("startinsert")
+    end)
+end, { desc = "Open Horizontal Terminal" })
 --keymap.set("t", "<leader>tt", "<Cmd>ToggleTerm<CR>")
 
 keymap.set({ "n", "t" }, "<leader>tt", function()
@@ -98,9 +108,10 @@ keymap.set({ "n", "t" }, "<leader>tt", function()
 end, { desc = "Open or focus terminal" })
 
 keymap.set("n", "<leader>ts", function() require("helper").preview_svg() end, { desc = 'Preview SVG' })
-keymap.set("n", "<F8>", function() require("helper").preview_svg() end, { desc = 'Preview SVG' })
+--keymap.set("n", "<F8>", function() require("helper").preview_svg() end, { desc = 'Preview SVG' })
 keymap.set("n", "<leader>tr", function() require("helper").run_app() end, { desc = "Run Application" })
-keymap.set({ "n", "i" }, "<F7>", function() require("helper").run_app2() end)
+keymap.set({ "n", "i", "t" }, "<F7>", function() require("helper").run_app2() end)
+keymap.set({ "n", "i", "t" }, "<F8>", function() require("helper").build_app() end)
 keymap.set({ "t" }, "<Esc><Esc>", function() require("helper").close_terminal() end)
 -- <leader>tv mapping is in py-venv.lua
 -- =============================================
@@ -130,7 +141,15 @@ keymap.set("n", "<leader>ee", function()
   end
 end, { desc = "Open/focus Neo-tree" })
 
-keymap.set("n", "<leader>ev", function() require("helper").preview_file() end, { desc = "File Preview" })
+keymap.set("n", "<leader>ev", function()
+  local path = vim.fn.expand("%:p:h")
+  vim.fn.setreg("+", path)
+  -- open Windows Run dialog
+  vim.fn.jobstart({ "cmd.exe", "/C", "start", "", path }, {
+    detach = true,
+  })
+end, { desc = "Open folder in Explorer" })
+--require("helper").preview_file() end, { desc = "File Preview" })
 -- =============================================
 -- <leader>e	--> End Explorer Functionalities
 
@@ -163,19 +182,8 @@ keymap.set("n", "<leader>c[", "<cmd>cprev<cr>", { desc = "Prev error" })
 
 -- <leader>c	--> Begin ChatGPT Functionalities
 -- ==============================================
-keymap.set("n", "<leader>cp", function() require("CopilotChat").toggle() end, { desc = "Toggle Copilot Chat" })
-keymap.set("v", "<leader>ce", "<cmd>CopilotChatExplain<CR>", { desc = "Explain selection" })
-keymap.set("v", "<leader>cf", "<cmd>CopilotChatFix<CR>", { desc = "Fix selection" })
-keymap.set("v", "<leader>co", "<cmd>CopilotChatOptimize<CR>", { desc = "Optimize selection" })
-keymap.set("v", "<leader>ct", "<cmd>CopilotChatTests<CR>", { desc = "Generate tests" })
 
 
---vim.keymap.set({ "n", "v" }, "<leader>ha", "<cmd>CodeCompanionActions<cr>", { desc = "AI Actions" })
---vim.keymap.set({ "n", "v" }, "<leader>hc", "<cmd>CodeCompanionChat Toggle<cr>", { desc = "Toggle AI Chat" })
---vim.keymap.set("v", "<leader>he", "<cmd>CodeCompanion /buffer<cr>", { desc = "Explain/Edit selection" })
-
--- Expand selection to AI (Visual mode only)
---vim.keymap.set("v", "hp", "<cmd>CodeCompanionChat Add<cr>", { desc = "Add selection to AI Chat" })
 -- ============================================
 -- <leader>c	--> End ChatGPT Functionalities
 
@@ -194,6 +202,21 @@ keymap.set("n", "<leader>m]", "<Plug>(Marks-next-bookmark0)", {silent = true})
 keymap.set("n", "<leader>m[", "<Plug>(Marks-prev-bookmark0)", {silent = true})
 --keymap.set("n", "<leader>ml", "<cmd>BookmarksListAll<CR>")
 keymap.set("n", "<leader>ml", "<cmd>Telescope marks<CR>", { desc = "Telescope Marks" })
+
+-- Common Windows shortcut
+keymap.set({ "n", "i" }, "<C-f>", function() require("helper").find_word() end, { silent = true })
+keymap.set({ "n", "i" }, "<F6>", function() require("telescope.builtin").live_grep({cwd = vim.loop.cwd(), hidden = true, no_ignore = false, additional_args = require("helper").text_filter() 
+  }) end, { silent = true })
+keymap.set({ "n", "i", "v" }, "<C-a>", "<esc>ggVG", { silent = true })
+keymap.set({ "n", "i" }, "<C-o>", function() require("helper").preview_file() end, { desc = "File Preview" })
+-- S-Home: Select to beginning of line
+keymap.set("n", "<S-Home>", "v0", { silent = true })
+keymap.set("i", "<S-Home>", "<Esc>v0", { silent = true })
+keymap.set("v", "<S-Home>", "0", { silent = true })
+-- S-End: Select to end of line
+keymap.set("n", "<S-End>", "v$", { silent = true })
+keymap.set("i", "<S-End>", "<Esc>v$", { silent = true })
+keymap.set("v", "<S-End>", "$", { silent = true })
 
 vim.keymap.set("i", "<C-l>", function()
   local view = vim.fn.winsaveview()
@@ -221,11 +244,14 @@ keymap.set("i", "<C-X>", "<Esc><Cmd>qa!<CR>", { silent = true })
 keymap.set("t", "<C-X>", [[<C-\><C-n><Cmd>qa!<CR>]], { silent = true })
 keymap.set("n", "<leader>y", '"+yiw', { silent = true })
 keymap.set("v", "<leader>y", '"+y', { silent = true })
+keymap.set("n", "<leader>d", '"_diw', { silent = true })
 keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
 keymap.set('n', '<C-z>', 'u', { silent = true })
 keymap.set('i', '<C-z>', '<C-o>u', { silent = true })
 keymap.set("n", "[", "<C-o>", { silent = true }) 
 keymap.set("n", "]", "<C-i>", { silent = true })
+keymap.set("n", "<leader>=", "=a{", { silent = true })
+keymap.set("i", "<A-=>", "<Esc>=a{gi", { silent = true })
 
 
 vim.keymap.set("n", "p", "p`[v`]=")

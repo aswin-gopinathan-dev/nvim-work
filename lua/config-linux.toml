@@ -1,7 +1,17 @@
-active_target = "bias_tests"
+active_target = "3D"
 
 python = "sagacity/Scripts/python"
 codelldb = "packages/codelldb/extension/adapter/codelldb"
+
+[3D]
+type = "cpp"
+name = "3D Renderer"
+build_dir = "."
+program = "app"
+cwd = "."
+args = []
+stopOnEntry = false
+runInTerminal = true
 
 [bias_tests]
 type = "cpp"
