@@ -3,6 +3,16 @@ active_target = "sagacity_desktop"
 python = "sagacity/Scripts/python.exe"
 codelldb = "packages/codelldb/extension/adapter/codelldb.exe"
 
+[3D]
+type = "cpp"
+name = "3D Renderer"
+build_dir = "."
+program = "app.exe"
+cwd = "."
+args = []
+stopOnEntry = false
+runInTerminal = true
+
 [bias_tests]
 type = "cpp"
 name = "Bias USB Driver Tests"
