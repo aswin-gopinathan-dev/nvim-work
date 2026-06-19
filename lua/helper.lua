@@ -759,6 +759,7 @@ local themes = {
   "blue-mood",
   "OceanicNext",
   "bluloco-dark",
+  "ayu"
 }
 
 function M.select_colorscheme()

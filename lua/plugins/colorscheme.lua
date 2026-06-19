@@ -12,15 +12,13 @@ return {
 		config = function()
 			vim.cmd.colorscheme "dayfox"
 
-
 			--require("catppuccin").setup(flavour="latte",)
 
 			-- setup must be called before loading
 			--vim.cmd.colorscheme "catppuccin-latte"
 			--require("yorumi").setup({variant="mist"})
 			vim.g.yorumi_variant = "mist"
-			
-			
+            vim.g.ayucolor = "light"
 
 
 			require("catppuccin").setup({
@@ -162,5 +160,6 @@ return {
     { 'letorbi/vim-colors-modern-borland' },
     { 'lmintmate/blue-mood-vim' },
     { "mhartington/oceanic-next" },
-    { 'uloco/bluloco.nvim' }, 
+    { 'uloco/bluloco.nvim' },
+    { 'ayu-theme/ayu-vim' },
 }
